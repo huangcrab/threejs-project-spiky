@@ -1,6 +1,8 @@
-import React from "react";
+import * as THREE from "three";
 
-export function spikyGeometry(geometry, list, listCount) {
+export function spikyGeometryOnGo(geometry, list, listCount) {
+  geometry.verticesNeedUpdate = true;
+
   let radius = geometry.vertices[0].length();
 
   const listNumber = geometry.vertices.length;
@@ -33,3 +35,18 @@ export function spikyGeometry(geometry, list, listCount) {
 
   return geometry;
 }
+
+export function spikyGeometry(geometry) {
+  const listNumber = geometry.vertices.length;
+
+  for (let i = 0; i < listNumber; i += 3) {
+    let length = Math.random() * 1.2 + 1;
+    let length2 = Math.random() * 1.1 + 1;
+    geometry.vertices[i].multiplyScalar(length);
+    geometry.vertices[i].divideScalar(length2);
+  }
+
+  return geometry;
+}
+
+export function Light() {}
