@@ -48,5 +48,3 @@ export function spikyGeometry(geometry) {
 
   return geometry;
 }
-
-export function Light() {}
