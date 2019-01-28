@@ -1,7 +1,13 @@
 import React, { Component } from "react";
 import * as THREE from "three";
-
-import { spikyGeometry, spikyGeometryOnGo } from "../../threeHelper/Effect";
+import Particle from "./Particle";
+import SimplexNoise from "simplex-noise";
+import {
+  createPoint,
+  updatePoint,
+  spikyGeometry,
+  spikyGeometryOnGo
+} from "../../threeHelper/Effect";
 import {
   RenderPass,
   GlitchEffect,
@@ -13,12 +19,12 @@ import {
 } from "postprocessing";
 
 import sunTexture from "../../assets/textures/sun.png";
-import px from "../../assets/textures/skies/starry/px.png";
-import py from "../../assets/textures/skies/starry/py.png";
-import pz from "../../assets/textures/skies/starry/pz.png";
-import nx from "../../assets/textures/skies/starry/nx.png";
-import ny from "../../assets/textures/skies/starry/ny.png";
-import nz from "../../assets/textures/skies/starry/nz.png";
+import px from "../../assets/textures/skies/space5/px.jpg";
+import py from "../../assets/textures/skies/space5/py.jpg";
+import pz from "../../assets/textures/skies/space5/pz.jpg";
+import nx from "../../assets/textures/skies/space5/nx.jpg";
+import ny from "../../assets/textures/skies/space5/ny.jpg";
+import nz from "../../assets/textures/skies/space5/nz.jpg";
 
 import stone from "../../assets/stone.jpg";
 import "./scene.css";
@@ -29,14 +35,39 @@ export default class Scene extends Component {
 
     this.list = [];
     this.listCount = 20;
+    this.frameCount = 0;
+    this.particles = [];
+    this.particleCount = 1000;
+    this.noise = 0;
+    this.noiseOffset = Math.random() * 100;
+    this.numParticlesOffset = 0;
+    this.p = null;
+    this.params = {
+      size: 22,
+      noiseScale: 0.1,
+      noiseSpeed: 0.009,
+      noiseStrength: 0.08,
+      noiseFreeze: false,
+
+      particleSize: 0.22,
+      particleSpeed: 0.1,
+      particleDrag: 0.9,
+      particleColor: 0x41a5ff, //0x41a5ff, 0xff6728
+      bgColor: 0x000000,
+      particleBlending: THREE.AdditiveBlending
+    };
+
+    this.frameCount = 0;
+    this.noise = 0;
+    this.noiseOffset = Math.random() * 100;
   }
   componentDidMount() {
+    //const { params } = this;
+
+    window.onresize = this.onWindowResize;
+    this.clock = new THREE.Clock();
     const lightIn = new THREE.PointLight("#000", 32);
     const lightOut = new THREE.PointLight("#000", 32);
-
-    const spotLight = new THREE.SpotLight(0xffffff);
-    spotLight.position.set(1000, 1000, 1000);
-    spotLight.castShadow = true;
 
     const width = this.mount.clientWidth;
     const height = this.mount.clientHeight;
@@ -46,10 +77,11 @@ export default class Scene extends Component {
     const reflectionCube = new THREE.CubeTextureLoader().load(urls);
     reflectionCube.format = THREE.RGBFormat;
     this.scene = new THREE.Scene();
-    this.scene.background = reflectionCube;
+    this.scene.background = new THREE.Color("#000");
+
     //ADD CAMERA
-    this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    this.camera.position.z = 10;
+    this.camera = new THREE.PerspectiveCamera(80, width / height, 1, 700);
+    this.camera.position.z = 20;
 
     this.control = new OrbitControls(this.camera);
     //ADD RENDERER
@@ -60,17 +92,34 @@ export default class Scene extends Component {
 
     //ADD OBJECT
 
-    const directionalLight = new THREE.DirectionalLight(0xff0000);
+    // this.scene.fog = new THREE.Fog();
+    // this.scene.fog.color.setHex(0);
+    // this.scene.fog.far = 215;
+    // this.scene.fog.near = 75;
+
+    this.pointGeometry = new THREE.Geometry();
+    this.pointGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
+
+    this.pMaterial = new THREE.PointsMaterial({
+      color: this.params.particleColor,
+      size: this.params.particleSize,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.35,
+      blending: THREE.AdditiveBlending
+    });
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff);
     directionalLight.position.set(0, 0, 0);
     directionalLight.target = this.scene;
     const sunMaterial = new THREE.PointsMaterial({
       map: new THREE.TextureLoader().load(sunTexture),
-      size: 5.5,
+      size: 10.4,
       sizeAttenuation: true,
-      color: 0xff0000,
+      color: 0xffffff,
       alphaTest: 0,
       transparent: true,
-      fog: false
+      fog: true
     });
 
     const sunGeometry = new THREE.BufferGeometry();
@@ -84,24 +133,24 @@ export default class Scene extends Component {
 
     this.scene.add(sun);
 
-    const geometry = spikyGeometry(new THREE.SphereGeometry(1.5, 32, 32));
-    const geometry1 = new THREE.SphereGeometry(1, 32, 32);
+    const geometry = spikyGeometry(new THREE.SphereGeometry(3, 32, 32));
+    const geometry1 = spikyGeometry(new THREE.SphereGeometry(1, 32, 32));
 
     const core = new THREE.MeshStandardMaterial({
-      emissive: 0xff0000,
+      emissive: 0xff3d00,
       emissiveIntensity: 1,
-      color: 0xff0000,
+      color: 0xffffff,
       metalness: 0.0,
       transparent: true,
-      opacity: 2,
+      opacity: 1.8,
       roughness: 1,
       alphaMap: new THREE.TextureLoader().load(stone)
     });
 
     const material = new THREE.MeshStandardMaterial({
       color: 0x02e5f9,
-      //emissive: 0x02e5f9,
-      //emissiveIntensity: 1,
+      emissive: 0x02e5f9,
+      emissiveIntensity: 0.3,
       transparent: false,
       side: THREE.DoubleSide,
       alphaTest: 0.4
@@ -119,7 +168,7 @@ export default class Scene extends Component {
 
     //ADD EFFECT COMPOSER
     const godRaysEffect = new GodRaysEffect(this.scene, this.camera, sun, {
-      resolutionScale: 0.8,
+      resolutionScale: 0.9,
       kernelSize: KernelSize.SMALL,
       density: 0.96,
       decay: 0.95,
@@ -133,8 +182,8 @@ export default class Scene extends Component {
     this.composer = new EffectComposer(this.renderer);
     const effectPass = new EffectPass(
       this.camera,
-      godRaysEffect,
-      new GlitchEffect()
+      godRaysEffect
+      //new GlitchEffect()
     );
     effectPass.renderToScreen = true;
 
@@ -155,10 +204,67 @@ export default class Scene extends Component {
   stop = () => {
     cancelAnimationFrame(this.frameId);
   };
+
   animate = () => {
     this.sphere.rotation.x += 0.006;
     this.sphere.rotation.y += 0.006;
+    let radius = Math.random() * 2 + 1;
+    // this.sphere.position.set(
+    //   Math.cos(Date.now() * 0.0011) * 2,
+    //   Math.cos(Date.now() * 0.0011) * 2,
+    //   Math.sin(Date.now() * 0.0011) * 2
+    // );
 
+    let numParticlesOffset = 1000 - this.particles.length;
+    if (numParticlesOffset > 0) {
+      for (var i = 0; i < numParticlesOffset; i++) {
+        let p = createPoint(
+          Math.random() * 22,
+          Math.random() * 22,
+          Math.random() * 22,
+          this.pointGeometry,
+          this.pMaterial,
+          this.scene
+        );
+
+        this.particles.push(p);
+      }
+    } else {
+      for (var i = 0; i < -numParticlesOffset; i++) {
+        this.scene.remove(this.particles[i].mesh);
+        this.particles[i] = null;
+        this.particles.splice(i, 1);
+      }
+    }
+    let simplex = new SimplexNoise();
+    // Update particles based on their coords
+    for (var i = 0; i < this.particles.length; i++) {
+      this.p = this.particles[i];
+
+      var noise =
+        simplex.noise3D(
+          this.p.pos.x * 0.1,
+          this.p.pos.y * 0.1,
+          this.p.pos.z * 0.1 + this.noiseOffset + this.frameCount * 0.009
+        ) *
+        Math.PI *
+        2;
+
+      this.p.angle.set(noise, noise, noise);
+      //this.p.update();
+    }
+
+    this.pMaterial.color.setHex(0x41a5ff);
+    this.pMaterial.size = 22;
+    this.pMaterial.blending = parseInt(THREE.AdditiveBlending);
+    if (true) this.frameCount++;
+    // console.log(this.meshx);
+    // let positionx = this.meshx.geometry.attributes.position;
+    // for (var i = 0; i < positionx.count; i++) {
+    //   var y = 35 * Math.sin(i / 5 + (this.clock.getElapsedTime() * 5 + i) / 7);
+    //   positionx.setY(i, y);
+    // }
+    // positionx.needsUpdate = true;
     const { list, listCount } = this;
     spikyGeometryOnGo(this.innerSphere.geometry, list, listCount);
     //spikyGeometryOnGo(this.sphere.geometry, list, listCount);
@@ -168,9 +274,22 @@ export default class Scene extends Component {
     this.renderScene();
     this.frameId = window.requestAnimationFrame(this.animate);
   };
+
+  onWindowResize = () => {
+    const { clientWidth, clientHeight } = this.mount;
+    this.camera.aspect = clientWidth / clientHeight;
+    this.camera.updateProjectionMatrix();
+
+    this.composer.setSize(clientWidth, clientHeight);
+  };
+
+  // onMouseMove = (x, y) => {
+  //   mousePosition.x = x;
+  //   mousePosition.y = y;
+  // };
+
   renderScene = () => {
-    this.composer.render(0.01);
-    //this.renderer.render(this.scene, this.camera);
+    this.composer.render(this.clock.getDelta());
   };
 
   render() {

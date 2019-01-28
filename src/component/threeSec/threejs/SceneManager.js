@@ -34,147 +34,93 @@ const OrbitControls = require("three-orbit-controls")(THREE);
 export default canvas => {
   const clock = new THREE.Clock();
   const origin = new THREE.Vector3(0, 0, 0);
-
   const screenDimensions = {
     width: canvas.width,
     height: canvas.height
   };
-
   const mousePosition = {
     x: 0,
     y: 0
   };
 
-  const scene = buildScene();
+  let urls = [px, nx, py, ny, pz, nz];
+  const reflectionCube = new THREE.CubeTextureLoader().load(urls);
+  reflectionCube.format = THREE.RGBFormat;
+  const scene = new THREE.Scene();
+  scene.background = reflectionCube;
 
-  const camera = buildCamera(screenDimensions);
-  const sceneSubjects = createSceneSubjects(scene);
+  const aspectRatio = canvas.width / canvas.height;
+  const fieldOfView = 60;
+  const nearPlane = 0.1;
+  const farPlane = 1000;
+  const camera = new THREE.PerspectiveCamera(
+    fieldOfView,
+    aspectRatio,
+    nearPlane,
+    farPlane
+  );
+  camera.position.z = 180;
+  const control = new OrbitControls(camera);
+  control.enableZoom = true;
 
-  const control = buildControl(camera);
-  const renderer = buildRender(screenDimensions, camera, scene);
+  const sceneSubjects = [
+    //new GeneralLights(scene),
+    //new SceneSubject(scene),
+    //new SunSubject(scene),
+    //new SceneSubjectTwo(scene)
+  ];
+  const directionalLight = new THREE.DirectionalLight(0xff0000);
 
-  function buildControl(camera) {
-    const control = new OrbitControls(camera);
-    control.enableZoom = true;
-    return control;
-  }
+  directionalLight.position.set(0, 0, -100);
+  directionalLight.target = scene;
+  const sunMaterial = new THREE.PointsMaterial({
+    map: new THREE.TextureLoader().load(sunTexture),
+    size: 50,
+    sizeAttenuation: true,
+    color: 0xff0000,
+    alphaTest: 0,
+    transparent: true,
+    fog: false
+  });
 
-  function buildScene() {
-    let urls = [px, nx, py, ny, pz, nz];
-    const reflectionCube = new THREE.CubeTextureLoader().load(urls);
-    reflectionCube.format = THREE.RGBFormat;
-    const scene = new THREE.Scene();
-    scene.background = reflectionCube;
+  const sunGeometry = new THREE.BufferGeometry();
+  sunGeometry.addAttribute(
+    "position",
+    new THREE.BufferAttribute(new Float32Array(3), 3)
+  );
+  const sun = new THREE.Points(sunGeometry, sunMaterial);
+  sun.frustumCulled = false;
+  sun.position.copy(directionalLight.position);
 
-    return scene;
-  }
+  scene.add(sun);
 
-  function buildRender({ width, height }, camera, scene) {
-    const renderer = new THREE.WebGLRenderer({
-      canvas: canvas,
-      antialias: true,
-      alpha: true
-    });
-    const DPR = window.devicePixelRatio ? window.devicePixelRatio : 1;
-    renderer.setPixelRatio(DPR);
-    renderer.setSize(width, height);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setClearColor("#000");
+  renderer.setSize(canvas.width, canvas.height);
 
-    renderer.gammaInput = true;
-    renderer.gammaOutput = true;
+  // const godRaysEffect = new GodRaysEffect(scene, camera, sun, {
+  //   //resolutionScale: 0.8
+  //   //kernelSize: KernelSize.SMALL
+  //   // density: 0.96,
+  //   //decay: 0.5
+  //   // weight: 0.4,
+  //   // exposure: 0.55,
+  //   // samples: 60,
+  //   // clampMax: 1.0
+  // });
 
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
+  // godRaysEffect.dithering = true;
 
-    const ambientLight = new THREE.AmbientLight(0x808080);
-    const directionalLight = new THREE.DirectionalLight(0xff0000);
-
-    directionalLight.position.set(0, 0, -100);
-    directionalLight.target = scene;
-    //scene.add(ambientLight);
-    //scene.add(directionalLight);
-
-    const sunMaterial = new THREE.PointsMaterial({
-      map: new THREE.TextureLoader().load(sunTexture),
-      size: 50,
-      sizeAttenuation: true,
-      color: 0xff0000,
-      alphaTest: 0,
-      transparent: true,
-      fog: false
-    });
-
-    const sunGeometry = new THREE.BufferGeometry();
-    sunGeometry.addAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(3), 3)
-    );
-    const sun = new THREE.Points(sunGeometry, sunMaterial);
-    sun.frustumCulled = false;
-    sun.position.copy(directionalLight.position);
-
-    scene.add(sun);
-
-    // const smaaEffect = new SMAAEffect(
-    //   new THREE.TextureLoader().load(search),
-    //   new THREE.TextureLoader().load(area)
-    // );
-    // smaaEffect.setEdgeDetectionThreshold(0.065);
-
-    const godRaysEffect = new GodRaysEffect(scene, camera, sun, {
-      //resolutionScale: 0.8
-      //kernelSize: KernelSize.SMALL
-      // density: 0.96,
-      decay: 0.5
-      // weight: 0.4,
-      // exposure: 0.55,
-      // samples: 60,
-      // clampMax: 1.0
-    });
-
-    godRaysEffect.dithering = true;
-
-    //const pass = new EffectPass(camera, godRaysEffect);
-
-    const effectPass = new EffectPass(
-      camera,
-      //smaaEffect
-      godRaysEffect
-      //new GlitchEffect()
-    );
-    effectPass.renderToScreen = true;
-
-    composer.addPass(effectPass);
-    //composer.addPass(pass);
-    return composer;
-  }
-
-  function buildCamera({ width, height }) {
-    const aspectRatio = width / height;
-    const fieldOfView = 60;
-    const nearPlane = 0.1;
-    const farPlane = 1000;
-    const camera = new THREE.PerspectiveCamera(
-      fieldOfView,
-      aspectRatio,
-      nearPlane,
-      farPlane
-    );
-
-    camera.position.z = 180;
-
-    return camera;
-  }
-
-  function createSceneSubjects(scene) {
-    const sceneSubjects = [
-      //new GeneralLights(scene),
-      //new SceneSubject(scene),
-      //new SunSubject(scene),
-      new SceneSubjectTwo(scene)
-    ];
-
-    return sceneSubjects;
-  }
+  // const effectPass = new EffectPass(
+  //   camera,
+  //   //smaaEffect
+  //   godRaysEffect
+  //   //new GlitchEffect()
+  // );
+  // effectPass.renderToScreen = true;
+  // const composer = new EffectComposer(renderer);
+  // composer.addPass(new RenderPass(scene, camera));
+  // composer.addPass(effectPass);
 
   function update() {
     const elapsedTime = clock.getElapsedTime();
@@ -185,7 +131,7 @@ export default canvas => {
     updateCameraPositionRelativeToMouse();
     control.update();
 
-    renderer.render(clock.getDelta());
+    renderer.render(0.01);
     // renderer.clear();
     // composer.render(0.01);
   }

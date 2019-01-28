@@ -3,13 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "noisejs": "^2.1.0",
+    "perlin-simplex": "0.0.3",
     "postprocessing": "^5.5.0",
     "react": "^16.7.0",
     "react-dom": "^16.7.0",
     "react-scripts": "2.1.3",
+    "simplex-noise": "^2.4.0",
     "three": "^0.100.0",
     "three-gltf-loader": "^1.100.0",
-    "three-orbit-controls": "^82.1.0"
+    "three-orbit-controls": "^82.1.0",
+    "tooloud": "^2.0.4",
+    "tumult": "^3.0.9"
   },
   "scripts": {
     "start": "react-scripts start",

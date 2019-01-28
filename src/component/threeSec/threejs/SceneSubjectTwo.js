@@ -31,13 +31,13 @@ export default function SceneSubjectTwo(scene) {
     alphaTest: 0.4
   });
 
-  material.map = new THREE.TextureLoader().load(stone);
+  material.alphaMap = new THREE.TextureLoader().load(stone);
   //material.map.repeat.y = 1;
   const innerSphere = new THREE.Mesh(geometry1, core);
   const sphere = new THREE.Mesh(geometry, material);
   lightIn.add(innerSphere);
   lightOut.add(sphere);
-  //scene.add(sphere);
+  scene.add(sphere);
   scene.add(innerSphere);
 
   const update = time => {

@@ -9,9 +9,9 @@ export default function SunSubject(scene) {
 
   const sunMaterial = new THREE.PointsMaterial({
     map: new THREE.TextureLoader().load(sunTexture),
-    size: 100,
+    size: 50,
     sizeAttenuation: true,
-    color: 0xffddaa,
+    color: 0xff0000,
     alphaTest: 0,
     transparent: true,
     fog: false
@@ -25,7 +25,6 @@ export default function SunSubject(scene) {
   const sun = new THREE.Points(sunGeometry, sunMaterial);
   sun.frustumCulled = false;
   sun.position.copy(directionalLight.position);
-  scene.add(sun);
-  function update(time) {}
-  return { update };
+
+  return sun;
 }
