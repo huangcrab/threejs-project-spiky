@@ -65,21 +65,8 @@ export function createPoint(x, y, z, geometry, material, scene) {
 
   return point;
 }
-export function updatePoint(point) {
-  const params = {
-    size: 220,
-    noiseScale: 0.1,
-    noiseSpeed: 0.009,
-    noiseStrength: 0.08,
-    noiseFreeze: false,
-
-    particleSize: 0.01,
-    particleSpeed: 0.1,
-    particleDrag: 0.9,
-    particleColor: 0x41a5ff, //0x41a5ff, 0xff6728
-    bgColor: 0x000000,
-    particleBlending: THREE.AdditiveBlending
-  };
+export function updatePoint(point, params) {
+  
 
   point.acc.set(1, 1, 1);
   point.acc.applyEuler(point.angle);
